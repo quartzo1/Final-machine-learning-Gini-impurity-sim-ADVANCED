@@ -1,0 +1,1009 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Gini Impurity Decision Tree Lab</title>
+  <style>
+    :root{
+      --bg:#0b0f19;
+      --panel:#101a2b;
+      --panel2:#0e1626;
+      --line:#24344f;
+      --text:#e7eefc;
+      --muted:#aab7d6;
+      --a:#ff5c8a;   /* class 0 */
+      --b:#44d19f;   /* class 1 */
+      --accent:#ffb020;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      background: var(--bg);
+      color: var(--text);
+    }
+    header{
+      padding:14px 16px;
+      border-bottom:1px solid var(--line);
+      background: rgba(14,22,38,0.8);
+      backdrop-filter: blur(10px);
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+    header .title{
+      line-height:1.15;
+    }
+    header .title strong{ font-size:16px; display:block; }
+    header .title span{ font-size:12px; color:var(--muted); }
+    header .pills{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+      align-items:center;
+    }
+    .pill{
+      font-size:12px;
+      padding:6px 10px;
+      border:1px solid var(--line);
+      border-radius:999px;
+      background: rgba(16,26,43,0.9);
+      color: var(--muted);
+      white-space:nowrap;
+    }
+
+    main{
+      display:grid;
+      grid-template-columns: 1.8fr 1fr;
+      gap:12px;
+      padding:12px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .card{
+      background: rgba(16,26,43,0.72);
+      border:1px solid var(--line);
+      border-radius:14px;
+      overflow:hidden;
+      min-height: 200px;
+    }
+    .cardHeader{
+      padding:10px 12px;
+      border-bottom:1px solid var(--line);
+      background: rgba(14,22,38,0.72);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .cardHeader h2{
+      margin:0;
+      font-size:12px;
+      text-transform: uppercase;
+      letter-spacing:0.5px;
+      color: var(--muted);
+    }
+    .controls{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:flex-end;
+    }
+    .btn{
+      padding:9px 12px;
+      border-radius:10px;
+      border:1px solid var(--line);
+      background: rgba(24,39,67,0.65);
+      color: var(--text);
+      cursor:pointer;
+      font-weight:700;
+      font-size:12px;
+    }
+    .btn:hover{ border-color: rgba(255,176,32,0.6); }
+    .btn.primary{
+      background: rgba(255,176,32,0.14);
+      border-color: rgba(255,176,32,0.5);
+    }
+    .btn.bad{
+      background: rgba(255,92,138,0.14);
+      border-color: rgba(255,92,138,0.5);
+    }
+    .btn:disabled{
+      opacity: 0.55;
+      cursor:not-allowed;
+    }
+    .grid2{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+      padding:12px;
+    }
+    .grid3{
+      display:grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap:10px;
+      padding:12px;
+    }
+    label{
+      font-size:12px;
+      color: var(--muted);
+      display:block;
+      margin-bottom:6px;
+    }
+    input, select{
+      width:100%;
+      padding:9px 10px;
+      border-radius:10px;
+      border:1px solid var(--line);
+      background: rgba(9,14,24,0.65);
+      color: var(--text);
+      outline:none;
+    }
+    input:focus, select:focus{
+      border-color: rgba(255,176,32,0.75);
+      box-shadow: 0 0 0 3px rgba(255,176,32,0.15);
+    }
+
+    /* Dataset dots like screenshot */
+    .datasetBlock{
+      padding: 10px 12px 14px 12px;
+    }
+    .legend{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      flex-wrap:wrap;
+      padding: 8px 12px 0 12px;
+      color: var(--muted);
+      font-size:12px;
+    }
+    .swatch{
+      width:10px; height:10px; border-radius:3px;
+      display:inline-block; margin-right:6px;
+      border:1px solid rgba(255,255,255,0.15);
+    }
+    .rowTitle{
+      margin:10px 0 6px 0;
+      font-weight:800;
+      letter-spacing:0.2px;
+      color: var(--text);
+      font-size:13px;
+    }
+    .dotRow{
+      display:flex;
+      flex-wrap:wrap;
+      gap:4px;
+      padding-bottom: 8px;
+    }
+    .sq{
+      width: 14px;
+      height: 14px;
+      border-radius: 4px;
+      border:1px solid rgba(255,255,255,0.10);
+    }
+    .c0{ background: var(--a); }
+    .c1{ background: var(--b); }
+
+    /* Tree drawing */
+    .treeWrap{
+      padding: 12px;
+      overflow:auto;
+      height: calc(100vh - 210px);
+      min-height: 520px;
+    }
+    svg{ width: 1100px; height: 700px; }
+    .nodeCircle{
+      fill: rgba(255,255,255,0.03);
+      stroke: rgba(231,238,252,0.45);
+      stroke-width: 1.5;
+    }
+    .nodeCircle.active{
+      stroke: var(--accent);
+      stroke-width: 3;
+    }
+    .edge{
+      stroke: rgba(231,238,252,0.25);
+      stroke-width: 2;
+      fill:none;
+    }
+    .nodeText{
+      fill: rgba(231,238,252,0.95);
+      font-size: 12px;
+      font-weight: 800;
+      text-anchor: middle;
+      dominant-baseline: middle;
+      pointer-events:none;
+    }
+    .nodeSub{
+      fill: rgba(170,183,214,0.9);
+      font-size: 10px;
+      font-weight: 600;
+      text-anchor: middle;
+      dominant-baseline: middle;
+      pointer-events:none;
+    }
+    .hint{
+      color: var(--muted);
+      font-size: 12px;
+      padding: 0 12px 12px 12px;
+      border-top: 1px solid var(--line);
+      background: rgba(14,22,38,0.55);
+    }
+    .hint code{
+      padding: 2px 6px;
+      border-radius: 8px;
+      border:1px solid var(--line);
+      background: rgba(24,39,67,0.55);
+      color: var(--text);
+    }
+
+    /* Info panel */
+    .info{
+      padding: 12px;
+    }
+    .info h3{
+      margin: 0 0 10px 0;
+      font-size: 14px;
+    }
+    .kv{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-bottom: 10px;
+    }
+    .kv span{
+      font-size: 11px;
+      color: var(--muted);
+      border:1px solid var(--line);
+      background: rgba(24,39,67,0.55);
+      border-radius: 999px;
+      padding: 6px 10px;
+    }
+    .mono{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+      color: rgba(231,238,252,0.92);
+      background: rgba(9,14,24,0.5);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      overflow:auto;
+    }
+    .samplesGrid{
+      display:grid;
+      grid-template-columns: repeat(10, 14px);
+      gap:4px;
+      margin-top: 10px;
+    }
+    .smallNote{
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 1050px){
+      main{ grid-template-columns: 1fr; }
+      svg{ width: 100%; height: 720px; }
+      .treeWrap{ height: auto; }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="title">
+    <strong>Gini Impurity Decision Tree Lab</strong>
+    <span>Clickable nodes + impurity math + step-by-step tree growth (final-ready)</span>
+  </div>
+  <div class="pills">
+    <span class="pill" id="pillStatus">Ready</span>
+    <span class="pill" id="pillMetric">Metric: Gini</span>
+    <span class="pill" id="pillDepth">Depth: 0</span>
+  </div>
+</header>
+
+<main>
+  <!-- Left column -->
+  <section class="card">
+    <div class="cardHeader">
+      <h2>Controls and Dataset</h2>
+      <div class="controls">
+        <button class="btn primary" id="btnGenerate">Generate Dataset</button>
+        <button class="btn" id="btnStep">Step Build</button>
+        <button class="btn primary" id="btnAuto">Auto Build</button>
+        <button class="btn bad" id="btnReset">Reset Tree</button>
+        <button class="btn" id="btnExport">Export Tree JSON</button>
+      </div>
+    </div>
+
+    <div class="grid3">
+      <div>
+        <label>Impurity Metric</label>
+        <select id="metric">
+          <option value="gini" selected>Gini</option>
+          <option value="entropy">Entropy</option>
+        </select>
+      </div>
+      <div>
+        <label>Tree Depth (max)</label>
+        <select id="maxDepth">
+          <option value="1">Depth 1 (very shallow)</option>
+          <option value="2">Depth 2 (weak)</option>
+          <option value="3">Depth 3</option>
+          <option value="4" selected>Depth 4 (strong)</option>
+          <option value="5">Depth 5 (very deep)</option>
+        </select>
+      </div>
+      <div>
+        <label>Min Samples to Split</label>
+        <input id="minSplit" type="number" min="2" step="1" value="10" />
+      </div>
+    </div>
+
+    <div class="grid3">
+      <div>
+        <label>Dataset Size</label>
+        <input id="nSamples" type="number" min="60" max="400" step="10" value="180" />
+      </div>
+      <div>
+        <label>Class Balance (prob class 1)</label>
+        <input id="balance" type="number" min="0.1" max="0.9" step="0.05" value="0.5" />
+      </div>
+      <div>
+        <label>Noise (label flip probability)</label>
+        <input id="noise" type="number" min="0" max="0.35" step="0.01" value="0.06" />
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div>
+        <label>Candidate Splits per Feature</label>
+        <input id="candidates" type="number" min="5" max="80" step="5" value="30" />
+      </div>
+      <div>
+        <label>Train Split Ratio</label>
+        <input id="trainRatio" type="number" min="0.5" max="0.9" step="0.05" value="0.75" />
+      </div>
+    </div>
+
+    <div class="legend">
+      <span><span class="swatch" style="background:var(--a)"></span>Class 0</span>
+      <span><span class="swatch" style="background:var(--b)"></span>Class 1</span>
+      <span style="margin-left:auto;">Click a node to see its impurity math and samples</span>
+    </div>
+
+    <div class="datasetBlock">
+      <div class="rowTitle">Training Set</div>
+      <div class="dotRow" id="trainRow"></div>
+
+      <div class="rowTitle">Test Set</div>
+      <div class="dotRow" id="testRow"></div>
+    </div>
+  </section>
+
+  <!-- Tree + Info (right column card contains both tree and info panel style like screenshot) -->
+  <section class="card">
+    <div class="cardHeader">
+      <h2>Decision Tree and Node Info</h2>
+      <div class="controls">
+        <span class="pill" id="pillNodes">Nodes: 0</span>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns: 1.7fr 1fr; gap:0; min-height: 680px;">
+      <div class="treeWrap" id="treeWrap">
+        <svg id="treeSvg" viewBox="0 0 1100 700" aria-label="Decision tree"></svg>
+      </div>
+      <div style="border-left:1px solid var(--line); background: rgba(14,22,38,0.55);">
+        <div class="info" id="infoPanel"></div>
+      </div>
+    </div>
+
+    <div class="hint">
+      Tip: use <code>Step Build</code> to grow one node at a time and watch impurity drop. Switch to <code>Entropy</code> to compare.
+    </div>
+  </section>
+</main>
+
+<script>
+/* -------------------------
+   Dataset (synthetic, 2 features)
+   Each sample: {id, x1, x2, y}
+   We DO NOT plot x1/x2; we visualize labels as colored squares like your screenshot.
+------------------------- */
+
+const el = {
+  trainRow: document.getElementById("trainRow"),
+  testRow: document.getElementById("testRow"),
+  infoPanel: document.getElementById("infoPanel"),
+  treeSvg: document.getElementById("treeSvg"),
+
+  btnGenerate: document.getElementById("btnGenerate"),
+  btnStep: document.getElementById("btnStep"),
+  btnAuto: document.getElementById("btnAuto"),
+  btnReset: document.getElementById("btnReset"),
+  btnExport: document.getElementById("btnExport"),
+
+  metric: document.getElementById("metric"),
+  maxDepth: document.getElementById("maxDepth"),
+  minSplit: document.getElementById("minSplit"),
+  nSamples: document.getElementById("nSamples"),
+  balance: document.getElementById("balance"),
+  noise: document.getElementById("noise"),
+  candidates: document.getElementById("candidates"),
+  trainRatio: document.getElementById("trainRatio"),
+
+  pillStatus: document.getElementById("pillStatus"),
+  pillMetric: document.getElementById("pillMetric"),
+  pillDepth: document.getElementById("pillDepth"),
+  pillNodes: document.getElementById("pillNodes"),
+  pillNodesCount: document.getElementById("pillNodes")
+};
+
+let DATA = { train: [], test: [] };
+
+function randn() {
+  // Box-Muller
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+function clamp01(x){ return Math.max(0, Math.min(1, x)); }
+
+function generateDataset() {
+  const n = Number(el.nSamples.value);
+  const p1 = Number(el.balance.value);
+  const flip = Number(el.noise.value);
+  const trainRatio = Number(el.trainRatio.value);
+
+  const samples = [];
+  for (let i = 0; i < n; i++) {
+    // Create mild structure so splits can reduce impurity.
+    // Two Gaussian blobs + a diagonal boundary component.
+    const baseY = (Math.random() < p1) ? 1 : 0;
+
+    // Feature generation depends weakly on class.
+    let x1 = clamp01(0.5 + (baseY ? 0.18 : -0.18) + 0.22 * randn());
+    let x2 = clamp01(0.5 + (baseY ? -0.10 : 0.10) + 0.22 * randn());
+
+    // Add a diagonal rule that creates more "tree-like" behavior
+    let y = (x1 + 0.8*x2 > 0.95) ? 1 : 0;
+    // Mix with base label a bit
+    y = (Math.random() < 0.35) ? baseY : y;
+
+    // Noise label flips
+    if (Math.random() < flip) y = 1 - y;
+
+    samples.push({ id: i, x1, x2, y });
+  }
+
+  // Shuffle and split
+  for (let i = samples.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [samples[i], samples[j]] = [samples[j], samples[i]];
+  }
+
+  const nTrain = Math.floor(n * trainRatio);
+  DATA.train = samples.slice(0, nTrain);
+  DATA.test  = samples.slice(nTrain);
+
+  renderDotRows();
+}
+
+function renderDotRows() {
+  const makeSq = (y) => {
+    const d = document.createElement("div");
+    d.className = "sq " + (y === 0 ? "c0" : "c1");
+    return d;
+  };
+
+  el.trainRow.innerHTML = "";
+  el.testRow.innerHTML = "";
+
+  // mimic screenshot: long sequences; keep order as-is
+  DATA.train.forEach(s => el.trainRow.appendChild(makeSq(s.y)));
+  DATA.test.forEach(s => el.testRow.appendChild(makeSq(s.y)));
+}
+
+/* -------------------------
+   Impurity + split selection
+------------------------- */
+
+function gini(counts) {
+  const n = counts[0] + counts[1];
+  if (n === 0) return 0;
+  const p0 = counts[0] / n;
+  const p1 = counts[1] / n;
+  return 1 - (p0*p0 + p1*p1);
+}
+
+function entropy(counts) {
+  const n = counts[0] + counts[1];
+  if (n === 0) return 0;
+  const p0 = counts[0] / n;
+  const p1 = counts[1] / n;
+  const H = (p) => (p <= 0) ? 0 : -p * Math.log2(p);
+  return H(p0) + H(p1);
+}
+
+function impurity(counts) {
+  return (el.metric.value === "entropy") ? entropy(counts) : gini(counts);
+}
+
+function countClasses(indices) {
+  let c0 = 0, c1 = 0;
+  for (const idx of indices) {
+    if (DATA.train[idx].y === 0) c0++;
+    else c1++;
+  }
+  return [c0, c1];
+}
+
+function weightedImpurity(leftCounts, rightCounts) {
+  const nl = leftCounts[0] + leftCounts[1];
+  const nr = rightCounts[0] + rightCounts[1];
+  const n = nl + nr;
+  if (n === 0) return 0;
+  return (nl/n) * impurity(leftCounts) + (nr/n) * impurity(rightCounts);
+}
+
+function bestSplit(indices) {
+  // Search thresholds for x1 and x2. Candidates are sampled from data values.
+  const cand = Number(el.candidates.value);
+  if (indices.length < 2) return null;
+
+  const valuesX1 = [];
+  const valuesX2 = [];
+  for (const idx of indices) {
+    valuesX1.push(DATA.train[idx].x1);
+    valuesX2.push(DATA.train[idx].x2);
+  }
+
+  const pickThresholds = (vals) => {
+    const t = [];
+    for (let i=0;i<cand;i++){
+      const v = vals[Math.floor(Math.random() * vals.length)];
+      t.push(v);
+    }
+    // add some evenly spaced too
+    for (let k=1;k<=6;k++){
+      t.push(k/7);
+    }
+    return t;
+  };
+
+  const thresholdsX1 = pickThresholds(valuesX1);
+  const thresholdsX2 = pickThresholds(valuesX2);
+
+  const parentCounts = countClasses(indices);
+  const parentImp = impurity(parentCounts);
+
+  let best = null;
+
+  function evalSplit(feature, thr) {
+    const left = [];
+    const right = [];
+    for (const idx of indices) {
+      const v = (feature === "x1") ? DATA.train[idx].x1 : DATA.train[idx].x2;
+      if (v < thr) left.push(idx);
+      else right.push(idx);
+    }
+    if (left.length === 0 || right.length === 0) return;
+
+    const lc = countClasses(left);
+    const rc = countClasses(right);
+    const childImp = weightedImpurity(lc, rc);
+    const gain = parentImp - childImp;
+
+    if (!best || gain > best.gain) {
+      best = {
+        feature, thr,
+        leftIdx: left, rightIdx: right,
+        parentCounts, leftCounts: lc, rightCounts: rc,
+        parentImp, childImp, gain
+      };
+    }
+  }
+
+  thresholdsX1.forEach(t => evalSplit("x1", t));
+  thresholdsX2.forEach(t => evalSplit("x2", t));
+
+  return best;
+}
+
+/* -------------------------
+   Tree structure + building
+------------------------- */
+
+let NODE_ID = 0;
+let TREE = null;
+let buildQueue = []; // nodes eligible for splitting
+let activeNodeId = null;
+
+function makeNode(indices, depth) {
+  const counts = countClasses(indices);
+  const imp = impurity(counts);
+  const pred = (counts[1] >= counts[0]) ? 1 : 0;
+  const node = {
+    id: NODE_ID++,
+    depth,
+    indices,
+    counts,
+    impurity: imp,
+    pred,
+    split: null,  // {feature, thr, gain}
+    left: null,
+    right: null,
+    // layout
+    x: 0,
+    y: 0
+  };
+  return node;
+}
+
+function resetTree() {
+  NODE_ID = 0;
+  const allIdx = DATA.train.map((_, i) => i);
+  TREE = makeNode(allIdx, 0);
+  buildQueue = [TREE];
+  activeNodeId = TREE.id;
+
+  updatePills();
+  layoutAndRender();
+  showNodeInfo(TREE.id);
+}
+
+function canSplit(node) {
+  const maxD = Number(el.maxDepth.value);
+  const minSplit = Number(el.minSplit.value);
+
+  const n = node.indices.length;
+  const pure = (node.counts[0] === 0 || node.counts[1] === 0);
+  if (pure) return false;
+  if (node.depth >= maxD) return false;
+  if (n < minSplit) return false;
+  return true;
+}
+
+function stepBuild() {
+  // Find next splittable node in queue (BFS-like)
+  while (buildQueue.length > 0) {
+    const node = buildQueue.shift();
+    if (!canSplit(node)) continue;
+
+    const split = bestSplit(node.indices);
+    if (!split || split.gain <= 1e-9) continue;
+
+    node.split = {
+      feature: split.feature,
+      thr: split.thr,
+      gain: split.gain,
+      parentImp: split.parentImp,
+      childImp: split.childImp,
+      leftCounts: split.leftCounts,
+      rightCounts: split.rightCounts
+    };
+
+    node.left = makeNode(split.leftIdx, node.depth + 1);
+    node.right = makeNode(split.rightIdx, node.depth + 1);
+
+    buildQueue.push(node.left, node.right);
+
+    activeNodeId = node.id;
+    updatePills();
+    layoutAndRender();
+    showNodeInfo(node.id);
+    return;
+  }
+
+  el.pillStatus.textContent = "Done (no more splits)";
+}
+
+let autoTimer = null;
+function autoBuild() {
+  if (autoTimer) return;
+  el.pillStatus.textContent = "Auto building...";
+  autoTimer = setInterval(() => {
+    const before = countNodes(TREE);
+    stepBuild();
+    const after = countNodes(TREE);
+    if (after === before || buildQueue.length === 0) {
+      clearInterval(autoTimer);
+      autoTimer = null;
+      el.pillStatus.textContent = "Auto build complete";
+    }
+  }, 180);
+}
+
+function countNodes(node) {
+  if (!node) return 0;
+  return 1 + countNodes(node.left) + countNodes(node.right);
+}
+
+/* -------------------------
+   Tree layout + SVG render
+------------------------- */
+
+function layoutTree(root) {
+  // simple tidy layout: assign x positions by in-order traversal
+  let xCursor = 0;
+  const xStep = 110;
+  const yStep = 120;
+
+  function dfs(node) {
+    if (!node) return;
+    dfs(node.left);
+    node.x = 80 + xCursor * xStep;
+    node.y = 80 + node.depth * yStep;
+    xCursor++;
+    dfs(node.right);
+  }
+  dfs(root);
+}
+
+function renderTreeSvg(root) {
+  const svg = el.treeSvg;
+  svg.innerHTML = "";
+
+  // edges first
+  function drawEdges(node) {
+    if (!node) return;
+    if (node.left) {
+      svg.appendChild(pathEdge(node.x, node.y, node.left.x, node.left.y));
+      drawEdges(node.left);
+    }
+    if (node.right) {
+      svg.appendChild(pathEdge(node.x, node.y, node.right.x, node.right.y));
+      drawEdges(node.right);
+    }
+  }
+  drawEdges(root);
+
+  // nodes
+  function drawNodes(node) {
+    if (!node) return;
+    svg.appendChild(drawNode(node));
+    drawNodes(node.left);
+    drawNodes(node.right);
+  }
+  drawNodes(root);
+}
+
+function pathEdge(x1, y1, x2, y2) {
+  const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  const midY = (y1 + y2) / 2;
+  const d = `M ${x1} ${y1+24} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2-24}`;
+  p.setAttribute("d", d);
+  p.setAttribute("class", "edge");
+  return p;
+}
+
+function drawNode(node) {
+  const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  g.style.cursor = "pointer";
+  g.addEventListener("click", () => {
+    activeNodeId = node.id;
+    layoutAndRender();
+    showNodeInfo(node.id);
+  });
+
+  const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  c.setAttribute("cx", node.x);
+  c.setAttribute("cy", node.y);
+  c.setAttribute("r", 26);
+  c.setAttribute("class", "nodeCircle" + (node.id === activeNodeId ? " active" : ""));
+  g.appendChild(c);
+
+  const t1 = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  t1.setAttribute("x", node.x);
+  t1.setAttribute("y", node.y - 4);
+  t1.setAttribute("class", "nodeText");
+  t1.textContent = node.impurity.toFixed(2);
+  g.appendChild(t1);
+
+  const t2 = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  t2.setAttribute("x", node.x);
+  t2.setAttribute("y", node.y + 12);
+  t2.setAttribute("class", "nodeSub");
+  t2.textContent = `${node.indices.length}`;
+  g.appendChild(t2);
+
+  return g;
+}
+
+function layoutAndRender() {
+  layoutTree(TREE);
+  renderTreeSvg(TREE);
+  el.pillNodes.textContent = `Nodes: ${countNodes(TREE)}`;
+}
+
+/* -------------------------
+   Node info panel
+------------------------- */
+
+function findNodeById(node, id) {
+  if (!node) return null;
+  if (node.id === id) return node;
+  return findNodeById(node.left, id) || findNodeById(node.right, id);
+}
+
+function giniCalcText(counts) {
+  const n = counts[0] + counts[1];
+  const p0 = counts[0] / n;
+  const p1 = counts[1] / n;
+  return `1 - ((${counts[0]}/${n})^2 + (${counts[1]}/${n})^2) = 1 - (${p0.toFixed(3)}^2 + ${p1.toFixed(3)}^2)`;
+}
+
+function entropyCalcText(counts) {
+  const n = counts[0] + counts[1];
+  const p0 = counts[0] / n;
+  const p1 = counts[1] / n;
+  const term = (p) => (p<=0) ? "0" : `${(-p * Math.log2(p)).toFixed(3)}`;
+  return `H = -p0*log2(p0) - p1*log2(p1) = ${term(p0)} + ${term(p1)}`;
+}
+
+function showNodeInfo(id) {
+  const node = findNodeById(TREE, Number(id));
+  if (!node) return;
+
+  const metric = el.metric.value;
+  el.pillMetric.textContent = `Metric: ${metric === "gini" ? "Gini" : "Entropy"}`;
+  el.pillDepth.textContent = `Depth: ${node.depth}`;
+
+  const imp = node.impurity;
+  const counts = node.counts;
+  const n = node.indices.length;
+
+  const calcLine = (metric === "gini") ? giniCalcText(counts) : entropyCalcText(counts);
+
+  const splitHtml = node.split ? `
+    <div class="kv" style="margin-top:8px;">
+      <span>Split: ${node.split.feature} &lt; ${node.split.thr.toFixed(3)}</span>
+      <span>Gain: ${node.split.gain.toFixed(4)}</span>
+      <span>Parent: ${node.split.parentImp.toFixed(4)}</span>
+      <span>Children: ${node.split.childImp.toFixed(4)}</span>
+    </div>
+    <div class="mono">Impurity reduction = parent - weighted(children) = ${node.split.parentImp.toFixed(4)} - ${node.split.childImp.toFixed(4)} = ${node.split.gain.toFixed(4)}</div>
+  ` : `
+    <div class="smallNote">This node is a leaf right now (pure, max depth reached, too few samples, or no useful split found).</div>
+  `;
+
+  // sample grid: show up to 90 samples for performance
+  const showIdx = node.indices.slice(0, 90);
+  const squares = showIdx.map(i => {
+    const y = DATA.train[i].y;
+    return `<div class="sq ${y===0?"c0":"c1"}" title="sample ${DATA.train[i].id}"></div>`;
+  }).join("");
+
+  el.infoPanel.innerHTML = `
+    <h3>Node Info</h3>
+    <div class="kv">
+      <span>Node ID: ${node.id}</span>
+      <span>Depth: ${node.depth}</span>
+      <span>Samples: ${n}</span>
+      <span>Class counts: [${counts[0]}, ${counts[1]}]</span>
+      <span>Prediction: class ${node.pred}</span>
+    </div>
+
+    <div class="kv">
+      <span>${metric === "gini" ? "Gini" : "Entropy"}: ${imp.toFixed(4)}</span>
+    </div>
+
+    <div class="mono">${calcLine}<br/>= ${imp.toFixed(4)}</div>
+
+    ${splitHtml}
+
+    <h3 style="margin-top:14px;">Samples</h3>
+    <div class="samplesGrid">${squares}</div>
+    <div class="smallNote">
+      Showing ${showIdx.length} of ${n} samples for this node. Colors represent labels only (like the class visualization in your screenshot).
+    </div>
+  `;
+}
+
+/* -------------------------
+   Export tree JSON
+------------------------- */
+function exportTree() {
+  function strip(node) {
+    if (!node) return null;
+    return {
+      id: node.id,
+      depth: node.depth,
+      samples: node.indices.length,
+      counts: node.counts,
+      impurity: Number(node.impurity.toFixed(6)),
+      pred: node.pred,
+      split: node.split ? {
+        feature: node.split.feature,
+        thr: Number(node.split.thr.toFixed(6)),
+        gain: Number(node.split.gain.toFixed(6)),
+        parentImp: Number(node.split.parentImp.toFixed(6)),
+        childImp: Number(node.split.childImp.toFixed(6))
+      } : null,
+      left: strip(node.left),
+      right: strip(node.right)
+    };
+  }
+  const obj = {
+    metric: el.metric.value,
+    maxDepth: Number(el.maxDepth.value),
+    minSplit: Number(el.minSplit.value),
+    candidatesPerFeature: Number(el.candidates.value),
+    trainSamples: DATA.train.length,
+    testSamples: DATA.test.length,
+    tree: strip(TREE)
+  };
+  const text = JSON.stringify(obj, null, 2);
+  const blob = new Blob([text], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "gini_tree.json";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/* -------------------------
+   Events
+------------------------- */
+el.btnGenerate.addEventListener("click", () => {
+  el.pillStatus.textContent = "Dataset generated";
+  generateDataset();
+  resetTree();
+});
+
+el.btnReset.addEventListener("click", () => {
+  el.pillStatus.textContent = "Tree reset";
+  resetTree();
+});
+
+el.btnStep.addEventListener("click", () => {
+  el.pillStatus.textContent = "Stepping...";
+  stepBuild();
+});
+
+el.btnAuto.addEventListener("click", () => {
+  autoBuild();
+});
+
+el.btnExport.addEventListener("click", () => exportTree());
+
+el.metric.addEventListener("change", () => {
+  // recompute impurities across whole tree quickly by rebuilding
+  el.pillStatus.textContent = "Metric changed (rebuilding)";
+  resetTree();
+  el.pillMetric.textContent = `Metric: ${el.metric.value === "gini" ? "Gini" : "Entropy"}`;
+});
+
+el.maxDepth.addEventListener("change", () => {
+  el.pillStatus.textContent = "Max depth changed (reset)";
+  resetTree();
+});
+
+function updatePills() {
+  el.pillMetric.textContent = `Metric: ${el.metric.value === "gini" ? "Gini" : "Entropy"}`;
+  el.pillNodes.textContent = `Nodes: ${countNodes(TREE)}`;
+}
+
+/* -------------------------
+   Init
+------------------------- */
+generateDataset();
+resetTree();
+</script>
+</body>
+</html>
